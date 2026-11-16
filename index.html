@@ -988,11 +988,11 @@ function applyVals(vals,uns){let n=0;
 $("photoStop").addEventListener("click",()=>photoCtl?.abort());
 const AI_PROMPT="Transcriu els valors escrits a mà en aquesta plantilla d'autòpsia fetal (Hospital Clínic). Respon NOMÉS amb el text següent, una dada per línia, amb exactament aquestes etiquetes i el número amb la seva unitat tal com està escrit. Omet les línies que no estiguin escrites a la plantilla; no calculis ni inventis res. Si un valor està ratllat o corregit, posa el valor final. Si un valor és difícil de llegir, afegeix-ne l'etiqueta a «Dubtosos». No hi posis noms de pacients.\n\nNecròpsia: N26-000000\nData: dd/mm/aa\nPatòleg:\nResident:\nSexe: F / M / I\nEG: setmanes+dies\nPes: g\nPlacenta: g\nCordó: cm\nPC: cm\nPT: cm\nPA: cm\nCrani-caudal: mm\nCrani-sacra: mm\nPeu: mm\nCervell: g\nCor: g\nTimus: g\nPD: g\nPI: g\nPulmons: g\nFetge: g\nMelsa: g\nRD: g\nRI: g\nRonyons: g\nSRD: g\nSRI: g\nSuprarenals: g\nDubtosos: etiquetes separades per comes\nNotes: altres anotacions (sense dades identificatives)\n\n(PD/PI = pulmó dret/esquerre, RD/RI = ronyó dret/esquerre, SRD/SRI = suprarenal dreta/esquerra; el número escrit després d'una clau «}» que uneix dret i esquerre és el pes conjunt: posa'l a Pulmons, Ronyons o Suprarenals.)";
 const TXT_KEYS=(()=>{const m={},add=(id,...ks)=>ks.forEach(k=>m[k]=id);
-  add("caseId","necropsia","necropsianumero","numnecropsia","numero","num","cas","caso","case","casenumber","autopsia","autopsy");add("adate","data","fecha","date");
+  add("caseId","ncaso","ncas","numcaso","numcas","numerocaso","numerodecaso","numerodecas","necropsian","nnecropsia","necropsia","necropsianumero","numnecropsia","numero","num","cas","caso","case","casenumber","autopsia","autopsy");add("adate","data","fecha","date");
   add("pathologist","patoleg","patologa","patologo","patologoa","patolegda","pathologist");add("resident","resident","residente");
-  add("sex","sexe","sexo","sex");add("_ga","eg","edatgestacional","edadgestacional","ga","gestationalage","setmanes","semanas");
+  add("sex","sexe","sexo","sex");add("_ga","egestacional","edadgest","edatgest","eg","edatgestacional","edadgestacional","ga","gestationalage","setmanes","semanas");
   add("i_BW","pes","pescorporal","peso","pesocorporal","fetusnadopes","pesfetal","pesofetal","bw","bodyweight");add("i_cord","cordo","cordon","cord","segmentcordo","segmentodecordon");
-  add("i_HC","pc","perimetrecefalic","perimetrocefalico","hc","headcircumference");add("i_CC","pt","perimetretoracic","perimetrotoracico","cc","chestcircumference");
+  add("i_HC","perimetrocraneal","perimetrecranial","perimetrocefalic","pcef","pc","perimetrecefalic","perimetrocefalico","hc","headcircumference");add("i_CC","pt","perimetretoracic","perimetrotoracico","cc","chestcircumference");
   add("i_AC","pa","perimetreabdominal","perimetroabdominal","ac","abdominalcircumference");
   add("i_CHL","cranicaudal","cranipodal","craniocaudal","craniopodal","craneopodal","craneotalon","cranitalo","longcraniopodal","longcranipodal","longcranicaudal","longitudcranicaudal","longitudcraneotalon","chl","crownheel");
   add("i_CRL","cranisacra","craneosacra","craniosacra","longcraniosacra","longcranisacra","longitudcranisacra","longitudcraneosacra","crl","crownrump");
@@ -1009,14 +1009,35 @@ const TXT_KEYS=(()=>{const m={},add=(id,...ks)=>ks.forEach(k=>m[k]=id);
   add("pl_w","placenta","pesplacentari","pesoplacentario","placentalweight");add("cd_len","longitudcordo","longitudcordon","cordlength","cordototal");
   add("_unsure","dubtosos","dudosos","uncertain","doubtful","dubtos","dudoso");add("notes","notes","notas","observacions","observaciones","comentaris");return m})();
 const MM_FIELDS=new Set(["i_cord","i_HC","i_CC","i_AC","i_CHL","i_CRL","i_FL","i_ICD","i_OCD","i_PL","i_IND","i_HL","i_BPD","i_FOD","i_penis","i_femur","i_tibia","i_fibula","i_humerus","i_radius","i_ulna","cd_len"]);
+const STOPW=new Set(["pes","peso","weight","total","conjunt","conjunta","conjunto","combined","de","del","dels","els","los","las","les","el","la","g","gr","grams","gramos","mm","cm","valor"]);
+const ORGW={pulmo:"lungs",pulmons:"lungs",pulmon:"lungs",pulmones:"lungs",lung:"lungs",lungs:"lungs",rony:"kidneys",ronyo:"kidneys",ronyons:"kidneys",rinon:"kidneys",rinones:"kidneys",kidney:"kidneys",kidneys:"kidneys",
+  suprarenal:"adrenals",suprarenals:"adrenals",suprarrenal:"adrenals",suprarrenales:"adrenals",adrenal:"adrenals",adrenals:"adrenals",glandulessuprarenals:"adrenals"};
+const RW=new Set(["dret","dreta","derecho","derecha","right","dch","dcho","dcha","d"]),LW=new Set(["esquerre","esquerra","izquierdo","izquierda","left","esq","izq","izdo","izda","e"]);
+function keyResolve(raw){const direct=TXT_KEYS[nk(raw)];if(direct)return direct;
+  const par=[...String(raw).matchAll(/\(([^)]*)\)/g)].map(m=>TXT_KEYS[nk(m[1])]).find(Boolean);
+  const base=String(raw).replace(/\([^)]*\)/g," ");const b2=TXT_KEYS[nk(base)];if(b2)return b2;
+  const tok=base.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const org=tok.map(x=>ORGW[x]).find(Boolean);
+  if(org){const side=tok.some(x=>RW.has(x))?"R":tok.some(x=>LW.has(x))?"L":"";return "i_"+org+side}
+  const rest=tok.filter(x=>!STOPW.has(x)).join("");if(rest&&TXT_KEYS[rest])return TXT_KEYS[rest];
+  return par||null}
 const nk=k=>String(k).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
 function parseTxt(raw){const t=raw.trim();const out={vals:{},uns:new Set(),bad:[],status:{}};
   if(/^[\[{]/.test(t)){try{const j=JSON.parse(t);const v=j.values||j;for(const [k,x] of Object.entries(v)){if($(k))out.vals[k]=x;else{const id=TXT_KEYS[nk(k)];if(id)out.vals[id]=x;else out.bad.push(k)}}
     (j.uncertain||[]).forEach(k=>out.uns.add($(k)?k:TXT_KEYS[nk(k)]));return out}catch(e){}}
   const segs=t.split(/\n|\||;(?=\s*[^\d\s])/).map(x=>x.trim()).filter(Boolean);
-  for(const seg of segs){const m=seg.match(/^[-*•\s]*([^:=]+?)\s*[:=]\s*(.+)$/);if(!m){out.bad.push(seg);continue}
-    const id=TXT_KEYS[nk(m[1])];let v=m[2].trim();if(!id){out.bad.push(seg);continue}
-    if(id==="_unsure"){v.split(/[,;\s]+/).map(nk).filter(Boolean).forEach(k=>{const f=TXT_KEYS[k];if(f)out.uns.add(f)});continue}
+  for(const seg of segs){const m=seg.match(/^[-*•\s]*([^:=]+?)\s*[:=]\s*(.+)$/);if(!m){if(/\d/.test(seg))out.bad.push(seg);continue}
+    const id=keyResolve(m[1]);let v=m[2].trim();if(!id){out.bad.push(seg);continue}
+    if(id!=="notes"&&id!=="caseId"&&id!=="pathologist"&&id!=="resident"&&id!=="_unsure"&&id!=="sex"&&!/\d/.test(v)&&!/^(no ?pesad?o?|no ?pesat|absent|ausente|agenesi)/i.test(nk(v)))continue;
+    const pm=id.match(/^i_(lungs|kidneys|adrenals)(R|L)$/),br=v.match(/\}\s*(\d+(?:[.,]\d+)?)\s*(kg|g|mg)?/i);
+    if(pm&&br){out.vals["i_"+pm[1]]=parseFloat(br[1].replace(",","."));v=v.split("}")[0]}
+    const pg=id.match(/^i_(lungs|kidneys|adrenals)$/);
+    if(pg){const lab=(re)=>{const mm=v.match(re);return mm?parseFloat(mm[1].replace(",",".")):null};
+      const r=lab(/(?:^|[\s,;(])(?:d|dret|dreta|der|derecho|derecha|dcho|dcha|r|right)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i),
+            l=lab(/(?:^|[\s,;(])(?:i|e|esq|esquerre|esquerra|izq|izquierdo|izquierda|izdo|izda|l|left)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i),
+            tt=lab(/(?:conjunt|conjunto|total|combined|suma|sum)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i);
+      if(r!=null||l!=null||tt!=null){if(r!=null)out.vals["i_"+pg[1]+"R"]=r;if(l!=null)out.vals["i_"+pg[1]+"L"]=l;if(tt!=null)out.vals["i_"+pg[1]]=tt;continue}}
+    if(id==="_unsure"){v.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).forEach(k=>{const f=keyResolve(k);if(f)out.uns.add(f)});continue}
     if(id==="notes"||id==="caseId"||id==="pathologist"||id==="resident"){out.vals[id]=v;continue}
     if(id==="adate"){const d=v.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);if(d){const y=d[3].length===2?"20"+d[3]:d[3];out.vals.adate=`${y}-${d[2].padStart(2,"0")}-${d[1].padStart(2,"0")}`}else if(/^\d{4}-\d{2}-\d{2}$/.test(v))out.vals.adate=v;else out.bad.push(seg);continue}
     if(id==="sex"){const x=nk(v);out.vals.sex=/^(f|fem|dona|mujer|female)/.test(x)?"F":/^(m|masc|home|varon|hombre|male)/.test(x)?"M":/^(i|ind|und)/.test(x)?"I":"";if(!out.vals.sex){delete out.vals.sex;out.bad.push(seg)}continue}
@@ -1032,8 +1053,10 @@ function parseTxt(raw){const t=raw.trim();const out={vals:{},uns:new Set(),bad:[
 $("bTxtIn").addEventListener("click",()=>{const b=$("txtBox");b.hidden=!b.hidden;$("bTxtIn").setAttribute("aria-expanded",String(!b.hidden));if(!b.hidden)$("txtIn").focus()});
 $("bTxtClear").addEventListener("click",()=>{$("txtIn").value="";$("txtStatus").textContent=""});
 $("bTxtPrompt").addEventListener("click",async()=>{const tx=AI_PROMPT;try{await navigator.clipboard.writeText(tx);toast(L().txtPromptDone)}catch(e){$("txtIn").value=tx;$("txtIn").select();toast(L().toast.sel)}});
-$("bTxtApply").addEventListener("click",()=>{const raw=$("txtIn").value;if(!raw.trim())return;const P=parseTxt(raw);clearAI();
+const isExample=()=>Object.values(I18N).some(x=>x.exId===$("caseId").value);
+$("bTxtApply").addEventListener("click",()=>{const raw=$("txtIn").value;if(!raw.trim())return;const P=parseTxt(raw);clearAI();if(isExample())fill({});
   for(const [k,v] of Object.entries(P.status)){const el=$("st_"+k);if(el){el.value=v;el.dispatchEvent(new Event("change",{bubbles:true}))}}
+  if(sumMode&&["i_lungs","i_kidneys","i_adrenals"].some(k=>P.vals[k]!=null))setMode(false);
   let n=applyVals(P.vals,new Set([...P.uns].filter(Boolean)));n+=Object.keys(P.status).length;
   if(P.vals.gaW){$("gaW").classList.add("ai")}if(P.vals.gaD){$("gaD").classList.add("ai")}
   render();const t=L();$("txtStatus").innerHTML=(n?esc(t.txtDone(n)):esc(t.txtNone))+(P.bad.length?`<br><b>${esc(t.txtBad)}</b> ${P.bad.map(esc).join(" · ")}`:"")});
@@ -1076,7 +1099,7 @@ Reply with only one JSON object, for example:
 {"values":{"gaW":24,"gaD":3,"i_BW":560,"i_brain":104,"i_lungsR":5.1},"uncertain":["i_brain"]}`;
   try{const imgs=await Promise.all(files.map(toJpeg));const r=await SAMPLE.json(prompt,{images:imgs,signal:photoCtl.signal,modelTier:"default"});
     const vals=r&&typeof r.values==="object"&&r.values?r.values:{},uns=new Set(Array.isArray(r?.uncertain)?r.uncertain.map(String):[]);
-    clearAI();const n=applyVals(vals,uns);
+    clearAI();if(isExample())fill({});if(sumMode&&["i_lungs","i_kidneys","i_adrenals"].some(k=>vals[k]!=null))setMode(false);const n=applyVals(vals,uns);
     document.querySelectorAll("details").forEach(d=>{if(d.querySelector("input.ai"))d.open=true});
     render();st.textContent=n?L().photoDone(n):L().photoNone}
   catch(err){const E=L().photoErr,c=err?.code;
