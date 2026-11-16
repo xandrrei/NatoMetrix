@@ -24,11 +24,16 @@ Introduces la edad gestacional, las medidas y los pesos, y NatoMetrix:
 
 ## Datos y privacidad
 
-- **No introduzcas datos identificativos de pacientes:** ni nombres, ni NHC, ni DNI/CIP. Identifica cada caso solo con el número de necropsia.
-- **Dónde se guardan los casos:** solo en el navegador del ordenador donde se introducen (`localStorage`). No se envían a ningún servidor ni a GitHub.
-- **Cuándo se pierden:** si se borran los datos de navegación o se cambia de ordenador. Usa **Exportar casos** a menudo para tener una copia de seguridad (un archivo `.json`), e **Importar casos** para recuperarla o pasarla a otro ordenador.
-- **Nunca subas los archivos exportados a este repositorio.** El `.gitignore` ya los excluye.
-- **Lectura de fotos de la plantilla:** esta versión no la incluye, porque requiere un servicio de IA con cuenta. Existe solo en la versión de claude.ai.
+- **NatoMetrix no guarda ningún caso.** Todo lo que se introduce se borra al cerrar o recargar la página: no se guarda en el navegador, ni se envía a ningún servidor, ni llega a GitHub.
+- Para conservar los resultados, cópialos al informe con los botones de copiar.
+- **No introduzcas datos identificativos de pacientes:** ni nombres, ni NHC, ni DNI/CIP.
+- Lo único que recuerda el navegador son preferencias de uso (idioma, columnas que se copian, modo de los órganos pares), que no contienen datos de pacientes.
+- **Lectura de fotos de la plantilla:** esta versión no lee fotos directamente, porque haría falta un servicio de IA con cuenta. En su lugar, usa **«Omplir des d'un text»**:
+  1. pulsa «Copiar instruccions per a la IA»;
+  2. pega las instrucciones en tu IA (Claude, Copilot…) junto con la foto;
+  3. copia la respuesta y pégala en NatoMetrix, que rellena las casillas y marca en amarillo los valores para revisar.
+
+  También se puede escribir el texto a mano con el mismo formato (`Pes: 585 g`, `Cervell: 82 g`, `PD: 8,5 g | PI: 7,2 g`…). La foto se sube a la IA de cada persona: que no salgan datos identificativos.
 
 ## Referencias
 
